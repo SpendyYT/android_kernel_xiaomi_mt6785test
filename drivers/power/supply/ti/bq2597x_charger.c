@@ -354,6 +354,8 @@ struct bq2597x {
 
 extern void set_bq2597x_load_flag(bool bqflag);
 
+static bool parallel_mode_wa;
+
 /************************************************************************/
 static int __bq2597x_read_byte(struct bq2597x *bq, u8 reg, u8 *data)
 {
@@ -2607,6 +2609,17 @@ static int bq2597x_charger_probe(struct i2c_client *client,
 	bq->irq_waiting = false;
 	bq->hv_charge_enable = 1;
 
+	ret = i2c_smbus_read_byte_data(client, BQ2597X_REG_13);
+	if (ret < 0) {
+		client->addr = 0x65;
+		ret = i2c_smbus_read_byte_data(client, BQ2597X_REG_13);
+		if (ret < 0) {
+			bq_err("failed to communicate with chip\n")
+			return -ENODEV;
+		}
+		parallel_mode_wa = true;
+	}
+	
 	ret = bq2597x_detect_device(bq);
 	if (ret) {
 		bq_err("No bq2597x device found!\n");
